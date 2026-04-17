@@ -9,6 +9,7 @@
 3. **從固定清單中選用**，禁止臨時發明 scope。若現有 scope 不足以描述變更，改動本文件加入新 scope 後再提交 commit。
 4. **一個 commit 只選一個 scope**。若跨多個 scope，優先使用主要改動的 scope；若真的跨越過半清單，省略 scope（使用 `type: subject` 格式）。
 5. **Scope 與 Linear label 解耦**。Linear labels（如 `deps`, `infra`, `insurance`）自由成長用於 issue 分類，**不強制**等同 commit scope。兩者語意有重疊時純屬巧合。
+6. **`deps` 是唯一不對齊 code topology 的例外 scope**。它是語意切面，專用於所有依賴為核心的變更（Dependabot/Renovate 自動產出、手動新增/升級/降級/移除、security patch）。三個 repo 皆有 `deps` scope 且語意相同，只是對應的依賴檔不同。其餘 scope 一律對齊目錄結構。
 
 ---
 
@@ -28,7 +29,8 @@ Frontend repo，Next.js 16 + React 19 + TailwindCSS v4 + shadcn/ui。Scope 來�
 | `api`       | `src/lib/api/`、`src/lib/generated/`                                                                                                   | 後端 API client、OpenAPI 生成的型別、API hooks                                                                                                                          |
 | `common`    | `src/components/common/`、`src/providers/`、`src/types/`、`src/hooks/` 跨功能 hook、`src/stores/` 跨功能 store、`src/lib/` 非 api 部分 | 跨功能 / 無特定 domain 的元件、hook、store、lib utility。例：`ErrorBoundary`、`ThemeToggle`、`use-debounce`、`ui-store`、`logger.ts`、`error-tracking.ts`、shared types |
 | `layouts`   | `src/components/layouts/`                                                                                                              | 頁面骨架元件：`Header`、`Footer`、`MainLayout`、`SplitPanelLayout`、`MobileAppLayout`                                                                                   |
-| `infra`     | 根目錄設定、CI/CD、Docker、部署、依賴管理                                                                                              | `next.config.ts`、`tsconfig.json`、`.github/`、`pnpm-lock.yaml`、環境變數、Dockerfile                                                                                   |
+| `infra`     | 根目錄設定、CI/CD、Docker、部署                                                                                                        | `next.config.ts`、`tsconfig.json`、`.github/workflows/`、環境變數、Dockerfile                                                                                           |
+| `deps`      | 依賴檔與依賴自動化設定                                                                                                                 | `package.json`、`pnpm-lock.yaml`、`.github/dependabot.yml`；Dependabot 產出、手動新增/升級/降級/移除依賴、security patch                                                |
 
 **歸屬原則：** 功能特定的 hook / store / helper 跟著功能走（例：`use-insurance-list.ts` → `insurance`、`conversation-store.ts` → `chat`、`use-profile-form.ts` → `auth`）；跨功能、無特定 domain 的才進 `common`。
 
@@ -41,7 +43,7 @@ Frontend repo，Next.js 16 + React 19 + TailwindCSS v4 + shadcn/ui。Scope 來�
 | `ai`, `ai-chat`                     | `chat`                                                                              |
 | `conversation`, `profile`           | 依內容：UI 改 → 對應元件 scope；API 串接 → `api`                                    |
 | `hooks`, `stores`, `providers`      | 功能特定 → 跟 feature scope；跨功能 → `common`                                      |
-| `deps`, `ci`, `cd`, `build`, `cors` | `infra`（type 選 `build`/`ci`/`chore` 視情況）                                      |
+| `ci`, `cd`, `build`, `cors`         | `infra`（type 選 `build`/`ci`/`chore` 視情況）                                      |
 
 > TODO: 過段時間這套規範穩定之後把這邊移除。
 
@@ -63,7 +65,8 @@ Backend repo，Go + Gin + GORM。Scope 來源對應 `internal/` 目錄下的 mod
 | `verification` | `internal/shared/verification/`                                                               | 驗證碼、email/sms 驗證                                                                                                                                                        |
 | `db`           | `internal/infrastructure/db/`、`migrations/`                                                  | DB connection、GORM 設定、migration 檔。migration 的 **type** 按意圖選：新功能用 `feat(db)`、修 bug 用 `fix(db)`、內部重構不動 schema 行為用 `refactor(db)`，不固定為 `chore` |
 | `http`         | `internal/infrastructure/http/`、`internal/infrastructure/middleware/`、`api/v1/`             | HTTP server 設定、middleware、CORS、router 組裝、handler 層共用                                                                                                               |
-| `infra`        | `internal/infrastructure/config/`、`internal/infrastructure/di/`、`cmd/`、CI/CD、Docker、部署 | 環境設定、DI 容器、entry point、`.github/`、`Dockerfile`、`railway.toml`、依賴管理                                                                                            |
+| `infra`        | `internal/infrastructure/config/`、`internal/infrastructure/di/`、`cmd/`、CI/CD、Docker、部署 | 環境設定、DI 容器、entry point、`.github/workflows/`、`Dockerfile`、`railway.toml`                                                                                            |
+| `deps`         | 依賴檔與依賴自動化設定                                                                        | `go.mod`、`go.sum`、`.github/dependabot.yml`；Dependabot 產出、手動新增/升級/降級/移除依賴、security patch                                                                    |
 
 ### 常見歷史 scope 映射
 
@@ -73,7 +76,8 @@ Backend repo，Go + Gin + GORM。Scope 來源對應 `internal/` 目錄下的 mod
 | `cors`                                                                       | `http`                                                       |
 | `middleware`                                                                 | `http`                                                       |
 | `database`, `config`                                                         | `db`（schema/連線）或 `infra`（env 設定）                    |
-| `cd`, `build`, `ci`, `deps`, `cmd`, `di`, `dependencies`, `type`, `notifier` | `infra`                                                      |
+| `cd`, `build`, `ci`, `cmd`, `di`, `dependencies`, `type`, `notifier`         | `infra`                                                      |
+| `deps` (historical)                                                          | `deps`（保留為獨立 scope，不再合併）                         |
 | `health`, `handlers`                                                         | `http`                                                       |
 | `profile`                                                                    | `customer`                                                   |
 | `chat`                                                                       | `conversation` 或 `agent` 視內容                             |
@@ -94,7 +98,8 @@ AI repo，Python + FastAPI + pydantic-ai + Gemini。Scope 來源對應 `app/` �
 | `api`    | `app/api/routes/`、`app/schemas/`                                                 | FastAPI route 層、request/response schema（非 LLM 直接使用） |
 | `core`   | `app/core/`                                                                       | config、logging、middleware、CORS、dependency injection      |
 | `models` | `app/models/`                                                                     | 資料結構、DTO、領域模型                                      |
-| `infra`  | `pyproject.toml`、`uv.lock`、`Makefile`、`Dockerfile`、`.github/`、`railway.toml` | 依賴管理、build、CI/CD、部署                                 |
+| `infra`  | `Makefile`、`Dockerfile`、`.github/workflows/`、`railway.toml`                    | build、CI/CD、部署                                           |
+| `deps`   | 依賴檔與依賴自動化設定                                                            | `pyproject.toml`、`uv.lock`、`.github/dependabot.yml`；Dependabot 產出、手動新增/升級/降級/移除依賴、security patch |
 
 **目錄歸屬補充：**
 
@@ -109,7 +114,8 @@ AI repo，Python + FastAPI + pydantic-ai + Gemini。Scope 來源對應 `app/` �
 | `ai`, `ai-chat`                          | `chat` 或 `agent` 視內容：若動對話 protocol → `chat`；若動 agent 定義、tool、prompt → `agent` |
 | `tools`, `prompt`                        | `agent`                                                                                       |
 | `cors`                                   | `core`                                                                                        |
-| `build`, `cd`, `ci`, `deps`, `gitignore` | `infra`                                                                                       |
+| `build`, `cd`, `ci`, `gitignore`         | `infra`                                                                                       |
+| `deps` (historical)                      | `deps`（保留為獨立 scope，不再合併）                                                          |
 
 ---
 
@@ -125,7 +131,8 @@ AI repo，Python + FastAPI + pydantic-ai + Gemini。Scope 來源對應 `app/` �
 | `insurance` | 保險 UI / 產品頁                                        | 保險 module                               | 不使用（邏輯走 agent tool）                           |
 | `auth`      | 登入 UI                                                 | auth module（JWT / session）              | 不使用                                                |
 | `admin`     | 不使用                                                  | 後台 module                               | 不使用                                                |
-| `infra`     | CI/CD、build、deps、deployment config                   | CI/CD、build、deps、deployment config     | CI/CD、build、deps、deployment config                 |
+| `infra`     | CI/CD、build、deployment config                         | CI/CD、build、deployment config           | CI/CD、build、deployment config                       |
+| `deps`      | `package.json`、`pnpm-lock.yaml`、`dependabot.yml`      | `go.mod`、`go.sum`、`dependabot.yml`      | `pyproject.toml`、`uv.lock`、`dependabot.yml`         |
 
 寫 commit 時不需額外標示 repo — 從當前所在 repo 的上下文自動解讀。
 
@@ -137,7 +144,8 @@ AI repo，Python + FastAPI + pydantic-ai + Gemini。Scope 來源對應 `app/` �
 
 1. **主要變更 + 附帶調整** → 使用主要變更的 scope（例如 `feat(agent)` commit 中附帶改一個 `core/` 設定是可接受的）。
 2. **跨越過半清單** → 省略 scope：`refactor: rename profile_type -> user_type`。
-3. **純 infra/deps/CI 類**（涉及多個 module 但本質是同一件事）→ 歸 `infra` scope 或 `ci` type。
+3. **純依賴類**（只動依賴檔、lock 檔、Dependabot 設定）→ 歸 `deps` scope。
+4. **純 infra/CI 類**（涉及多個 module 但本質是同一件事，非依賴變更）→ 歸 `infra` scope 或 `ci` type。
 
 ---
 
