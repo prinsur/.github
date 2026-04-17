@@ -39,7 +39,7 @@
 name: Lint PR Title
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, edited, synchronize, reopened]
 
 permissions:
@@ -106,7 +106,13 @@ infra
 
 ### 觸發條件說明
 
-使用 `pull_request_target`（而非 `pull_request`）是為了在 fork 提交的 PR 也能正常執行（`pull_request` 在 fork 場景 `GITHUB_TOKEN` 無寫入權限）。本 workflow 只需要讀取 PR metadata，不 checkout 原始碼，無 fork PR 惡意程式碼執行風險。
+使用 `pull_request`（而非 `pull_request_target`）的理由：
+
+- prinsur 三個 repo 皆為 organization 內部 private repo，不預期接收 fork PR，`pull_request_target` 提供的 fork 支援價值低。
+- `pull_request` 會從 PR 的 HEAD（feature branch）讀取 workflow 定義，**首次加入本 workflow 時可自我驗證**；若改用 `pull_request_target`，GitHub 會從 base branch（main）讀取 workflow，首次 PR 因檔案尚未在 main 而無法觸發（chicken-and-egg）。
+- 本 workflow 只讀取 PR metadata，不 checkout 原始碼、不需要 secret，`pull_request` 的 read-only `GITHUB_TOKEN` 已足夠。
+
+若未來需接收 fork PR，可依 [`amannn/action-semantic-pull-request`](https://github.com/amannn/action-semantic-pull-request) 文件改用 `pull_request_target`。
 
 ---
 
